@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DataLabel — AI Text Annotation Tool</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #6c47ff;
+      --primary-dark: #5535dd;
+      --positive: #22c55e;
+      --negative: #ef4444;
+      --neutral: #f59e0b;
+      --bg: #0f0f1a;
+      --card: #1a1a2e;
+      --border: #2a2a4a;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .logo-icon {
+      background: var(--primary);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .badge {
+      background: rgba(108, 71, 255, 0.2);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      padding: 20px 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      flex: 1;
+      min-width: 120px;
+      text-align: center;
+    }
+
+    .stat-card .number {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .stat-card.total .number { color: var(--primary); }
+    .stat-card.positive .number { color: var(--positive); }
+    .stat-card.negative .number { color: var(--negative); }
+    .stat-card.neutral .number { color: var(--neutral); }
+
+    /* MAIN LAYOUT */
+    .main {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+      padding: 0 32px 32px;
+    }
+
+    /* FORM PANEL */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      height: fit-content;
+    }
+
+    .panel h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    textarea { resize: vertical; min-height: 100px; }
+
+    /* LABEL BUTTONS */
+    .label-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .label-btn {
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+      background: var(--bg);
+      color: var(--muted);
+    }
+
+    .label-btn:hover { transform: translateY(-1px); }
+
+    .label-btn.active[data-label="Positive"] {
+      background: rgba(34, 197, 94, 0.15);
+      border-color: var(--positive);
+      color: var(--positive);
+    }
+
+    .label-btn.active[data-label="Negative"] {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: var(--negative);
+      color: var(--negative);
+    }
+
+    .label-btn.active[data-label="Neutral"] {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: var(--neutral);
+      color: var(--neutral);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      margin-top: 10px;
+    }
+
+    .btn-outline:hover { background: rgba(108,71,255,0.1); }
+
+    .btn-danger-sm {
+      background: transparent;
+      color: var(--negative);
+      border: 1px solid var(--negative);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: all 0.2s;
+    }
+
+    .btn-danger-sm:hover { background: rgba(239,68,68,0.1); }
+
+    /* TABLE */
+    .table-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .table-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .export-btns { display: flex; gap: 8px; }
+
+    .btn-export {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-json {
+      background: rgba(108,71,255,0.2);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    .btn-json:hover { background: rgba(108,71,255,0.35); }
+
+    .btn-csv {
+      background: rgba(34,197,94,0.15);
+      color: var(--positive);
+      border: 1px solid var(--positive);
+    }
+
+    .btn-csv:hover { background: rgba(34,197,94,0.3); }
+
+    /* FILTER BAR */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .filter-btn.active, .filter-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(108,71,255,0.1);
+    }
+
+    /* ENTRIES LIST */
+    .entries-list { padding: 16px 24px; }
+
+    .entry-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .label-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .dot-Positive { background: var(--positive); }
+    .dot-Negative { background: var(--negative); }
+    .dot-Neutral  { background: var(--neutral); }
+    .dot-Custom   { background: var(--primary); }
+
+    .entry-content { flex: 1; }
+
+    .entry-text {
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+
+    .entry-meta {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .tag-Positive { background: rgba(34,197,94,0.15); color: var(--positive); }
+    .tag-Negative { background: rgba(239,68,68,0.15); color: var(--negative); }
+    .tag-Neutral  { background: rgba(245,158,11,0.15); color: var(--neutral); }
+    .tag-Custom   { background: rgba(108,71,255,0.15); color: var(--primary); }
+
+    .entry-time {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 50px;
+      color: var(--muted);
+    }
+
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+    /* SUCCESS TOAST */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: var(--positive);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      z-index: 1000;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 768px) {
+      .main { grid-template-columns: 1fr; padding: 0 16px 24px; }
+      .stats-bar { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🏷️</div>
+      <span>DataLabel</span>
+      <span class="badge">AI Dataset Builder</span>
+    </div>
+    <div style="font-size: 0.8rem; color: var(--muted);">Built for Ethara.AI</div>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-card total">
+      <div class="number" id="stat-total">0</div>
+      <div class="label">Total Entries</div>
+    </div>
+    <div class="stat-card positive">
+      <div class="number" id="stat-positive">0</div>
+      <div class="label">Positive</div>
+    </div>
+    <div class="stat-card negative">
+      <div class="number" id="stat-negative">0</div>
+      <div class="label">Negative</div>
+    </div>
+    <div class="stat-card neutral">
+      <div class="number" id="stat-neutral">0</div>
+      <div class="label">Neutral</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- ADD ENTRY FORM -->
+    <div class="panel">
+      <h2>Add New Entry</h2>
+
+      <div class="form-group">
+        <label>Text to Annotate</label>
+        <textarea id="textInput" placeholder="Paste or type any sentence here..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Select Label</label>
+        <div class="label-btns">
+          <button class="label-btn" data-label="Positive" onclick="selectLabel(this)">😊 Positive</button>
+          <button class="label-btn" data-label="Negative" onclick="selectLabel(this)">😞 Negative</button>
+          <button class="label-btn" data-label="Neutral"  onclick="selectLabel(this)">😐 Neutral</button>
+        </div>
+        <input type="text" id="customLabel" placeholder="Or type a custom label..." />
+      </div>
+
+      <div class="form-group">
+        <label>Category (Optional)</label>
+        <select id="categoryInput">
+          <option value="">-- Select Category --</option>
+          <option value="Sentiment">Sentiment Analysis</option>
+          <option value="Spam">Spam Detection</option>
+          <option value="Intent">Intent Classification</option>
+          <option value="Emotion">Emotion Detection</option>
+          <option value="Topic">Topic Labeling</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Annotated By</label>
+        <input type="text" id="annotatorInput" placeholder="Your name" />
+      </div>
+
+      <button class="btn btn-primary" onclick="addEntry()">＋ Add to Dataset</button>
+      <button class="btn btn-outline" onclick="clearForm()">Clear</button>
+    </div>
+
+    <!-- ENTRIES TABLE -->
+    <div class="table-panel">
+      <div class="table-header">
+        <h2>Dataset Entries</h2>
+        <div class="export-btns">
+          <button class="btn-export btn-json" onclick="exportJSON()">⬇ Export JSON</button>
+          <button class="btn-export btn-csv"  onclick="exportCSV()">⬇ Export CSV</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterEntries('All', this)">All</button>
+        <button class="filter-btn" onclick="filterEntries('Positive', this)">😊 Positive</button>
+        <button class="filter-btn" onclick="filterEntries('Negative', this)">😞 Negative</button>
+        <button class="filter-btn" onclick="filterEntries('Neutral',  this)">😐 Neutral</button>
+      </div>
+
+      <div class="entries-list" id="entriesList">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>No entries yet. Add your first annotation above!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const API_BASE = 'http://localhost:8080/api/entries';
+    let currentFilter = 'All';
+    let selectedLabel = '';
+
+    // ─── On Page Load ───────────────────────────────────────────────
+    window.onload = () => {
+      loadEntries();
+      loadStats();
+    };
+
+    // ─── Select Label Button ─────────────────────────────────────────
+    function selectLabel(btn) {
+      document.querySelectorAll('.label-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedLabel = btn.dataset.label;
+      document.getElementById('customLabel').value = '';
+    }
+
+    // ─── Add Entry ───────────────────────────────────────────────────
+    async function addEntry() {
+      const text = document.getElementById('textInput').value.trim();
+      const custom = document.getElementById('customLabel').value.trim();
+      const label = custom || selectedLabel;
+      const category = document.getElementById('categoryInput').value;
+      const annotatedBy = document.getElementById('annotatorInput').value.trim();
+
+      if (!text) return showToast('⚠️ Please enter some text!', '#ef4444');
+      if (!label) return showToast('⚠️ Please select or type a label!', '#ef4444');
+
+      const entry = { text, label, category, annotatedBy };
+
+      try {
+        const res = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry)
+        });
+
+        if (res.ok) {
+          showToast('✅ Entry added to dataset!');
+          clearForm();
+          loadEntries();
+          loadStats();
+        } else {
+          showToast('❌ Failed to add entry', '#ef4444');
+        }
+      } catch (err) {
+        showToast('❌ Cannot connect to server', '#ef4444');
+        console.error(err);
+      }
+    }
+
+    // ─── Load Entries ────────────────────────────────────────────────
+    async function loadEntries() {
+      try {
+        let url = currentFilter === 'All'
+          ? API_BASE
+          : `${API_BASE}/filter?label=${currentFilter}`;
+
+        const res = await fetch(url);
+        const entries = await res.json();
+        renderEntries(entries);
+      } catch (err) {
+        console.error('Failed to load entries:', err);
+      }
+    }
+
+    // ─── Render Entries ───────────────────────────────────────────────
+    function renderEntries(entries) {
+      const list = document.getElementById('entriesList');
+
+      if (!entries.length) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📭</div>
+            <p>No entries found.</p>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = entries.reverse().map(e => {
+        const dotClass = ['Positive','Negative','Neutral'].includes(e.label)
+          ? `dot-${e.label}` : 'dot-Custom';
+        const tagClass = ['Positive','Negative','Neutral'].includes(e.label)
+          ? `tag-${e.label}` : 'tag-Custom';
+        const time = e.createdAt
+          ? new Date(e.createdAt).toLocaleString() : '';
+
+        return `
+          <div class="entry-card">
+            <div class="label-dot ${dotClass}"></div>
+            <div class="entry-content">
+              <div class="entry-text">${escapeHtml(e.text)}</div>
+              <div class="entry-meta">
+                <span class="tag ${tagClass}">${e.label}</span>
+                ${e.category ? `<span class="tag tag-Custom">${e.category}</span>` : ''}
+                ${e.annotatedBy ? `<span class="entry-time">by ${escapeHtml(e.annotatedBy)}</span>` : ''}
+                <span class="entry-time">${time}</span>
+              </div>
+            </div>
+            <button class="btn-danger-sm" onclick="deleteEntry(${e.id})">Delete</button>
+          </div>`;
+      }).join('');
+    }
+
+    // ─── Delete Entry ─────────────────────────────────────────────────
+    async function deleteEntry(id) {
+      if (!confirm('Delete this entry?')) return;
+      try {
+        await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+        loadEntries();
+        loadStats();
+        showToast('🗑️ Entry deleted');
+      } catch (err) {
+        showToast('❌ Failed to delete', '#ef4444');
+      }
+    }
+
+    // ─── Load Stats ───────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE}/stats`);
+        const stats = await res.json();
+        document.getElementById('stat-total').textContent    = stats.total    || 0;
+        document.getElementById('stat-positive').textContent = stats.Positive || 0;
+        document.getElementById('stat-negative').textContent = stats.Negative || 0;
+        document.getElementById('stat-neutral').textContent  = stats.Neutral  || 0;
+      } catch (err) { console.error(err); }
+    }
+
+    // ─── Filter ───────────────────────────────────────────────────────
+    function filterEntries(label, btn) {
+      currentFilter = label;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadEntries();
+    }
+
+    // ─── Export JSON ──────────────────────────────────────────────────
+    function exportJSON() {
+      window.open(`${API_BASE}/export`, '_blank');
+      showToast('📥 Downloading JSON dataset...');
+    }
+
+    // ─── Export CSV ───────────────────────────────────────────────────
+    function exportCSV() {
+      window.open(`${API_BASE}/export/csv`, '_blank');
+      showToast('📥 Downloading CSV dataset...');
+    }
+
+    // ─── Clear Form ───────────────────────────────────────────────────
+    function clearForm() {
+      document.getElementById('textInput').value    = '';
+      document.getElementById('customLabel').value  = '';
+      document.getElementById('categoryInput').value = '';
+      document.getElementById('annotatorInput').value = '';
+      document.querySelectorAll('.label-btn').forEach(b => b.classList.remove('active'));
+      selectedLabel = '';
+    }
+
+    // ─── Toast ────────────────────────────────────────────────────────
+    function showToast(msg, color = '#22c55e') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.background = color;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
